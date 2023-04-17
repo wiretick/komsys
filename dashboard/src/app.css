@@ -6,3 +6,11 @@
 body {
     @apply bg-gray-100
 }
+
+.badge-red {
+    @apply bg-red-100 text-red-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-red-900 dark:text-red-300
+}
+
+.blue-link {
+    @apply font-medium text-blue-600 dark:text-blue-500 hover:underline
+}
