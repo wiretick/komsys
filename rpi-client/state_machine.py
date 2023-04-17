@@ -1,6 +1,6 @@
 from stmpy import Driver, Machine
 import asyncio
-from evdev import InputDevice
+import evdev
 from sense_hat import SenseHat
 from mqtt_client import MQTT_Client
 
@@ -103,7 +103,14 @@ driver.start()
 mq_client = MQTT_Client(driver, GROUP_ID, rpilogic)
 mq_client.start(broker, port)
 
-dev = InputDevice('/dev/input/event3')
+
+def get_joystick():
+    devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
+    for device in devices:
+        if device.name == "Raspberry Pi Sense HAT Joystick":
+            return device
+
+dev = get_joystick()
 
 # helper function to read the relevant events from the device
 async def helper(dev):
