@@ -6,8 +6,14 @@ app = FastAPI()
 
 # CORS origins
 origins = [
-    "http://localhost:5173"
+    "*"
 ]
+
+# midlertidig "database" :))
+current_task = {
+    1: 0,
+    2: 0
+}
 
 app.add_middleware(
     CORSMiddleware,
@@ -26,9 +32,9 @@ mqtt = FastMQTT(
 )
 mqtt.init_app(app)
 
-
+# bryr vi oss om en respons her, eller skal vi bare sende alt over mqtt til dashboard hvis det blir requestet?
 @app.get("/tasks")
-def get_task():
+def get_task():     
     return [
         {
             "group": 2,
@@ -58,11 +64,18 @@ def get_task():
 
 
 @app.get("/tasks/{group_id}")
-def get_task(group_id: int):
+def get_task(group_id: int, next: bool, prev: bool): # samme funksjonsnavn som over??
     print(f"Get task for group {group_id}")
-    return {
-        "task": 1
-    }
+    if next and not prev:
+        if current_task[group_id] < 9:
+            current_task[group_id] += 1
+        
+    elif prev and not next:
+        if current_task[group_id] > 0:
+            current_task[group_id] -= 1
+
+
+    mqtt.publish(f"rpi_ta_system/current_task/{group_id}", current_task[group_id])
 
 
 @app.post("/help/{group_id}")
@@ -74,6 +87,10 @@ def ask_for_help(group_id: int) -> None:
     # https://pypi.org/project/fastapi-mqtt/
     mqtt.publish("rpi_ta_system/help_is_coming", f"{group_id}")
 
+@app.get("/help_is_coming/{group_id}")
+def help_is_coming(group_id: int) -> None:
+    # Send notification to dashboard (publish)
+    mqtt.publish("rpi_ta_system/help_is_coming", f"{group_id}")
 
 
 @app.delete("/help/{group_id}")
