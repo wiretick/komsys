@@ -3,10 +3,11 @@ import asyncio
 import evdev
 from sense_hat import SenseHat
 from mqtt_client import MQTT_Client
+from time import sleep
 
 import requests
 
-URL = "http://localhost:8000"
+URL = "http://slim7.local:8000"
 GROUP_ID = 1
 broker, port = "mqtt20.iik.ntnu.no", 1883
 CURRENT_TASK = 0
@@ -20,6 +21,7 @@ class RpiLogic():
         print("STATE: initial")
         global CURRENT_TASK
         self.task = CURRENT_TASK
+        r = requests.get(f"{URL}/tasks/{GROUP_ID}", params={"next": False, "prev": False})
         # self.hat.show_message("komsys")
 
     def display_current_task(self):
@@ -28,15 +30,23 @@ class RpiLogic():
 
     def get_next_task(self):
         print("get_next_task")
+        r = requests.get(f"{URL}/tasks/{GROUP_ID}", params={"next": True, "prev": False})
 
     def get_prev_task(self):
         print("get_prev_task")
+        r = requests.get(f"{URL}/tasks/{GROUP_ID}", params={"next": False, "prev": True})
 
-    def display_help(self):
+    def display_red(self):
         print("display_waiting_for_help")
         for i in range(8):
             for j in range(8):
                 self.hat.set_pixel(i,j, (255,0,0))
+
+    def display_green(self):
+        for i in range(8):
+            for j in range(8):
+                self.hat.set_pixel(i,j, (0,255,0))
+
 
     def display_waiting(self):
         print("display_waiting")
@@ -46,8 +56,8 @@ class RpiLogic():
         print("send_help_request")
         # r = requests.post(f"{URL}/help/{GROUP_ID}", json={"task": self.task})
     
-    def help_finished(self):
-        print("help_finished")
+    def help_no_longer_needed(self):
+        print("help_no_longer_needed")
         # r = requests.delete(f"{URL}/help/{GROUP_ID}")
 
 working_on_task = {'name': 'working_on_task',
@@ -55,13 +65,16 @@ working_on_task = {'name': 'working_on_task',
 
 waiting_for_help = {'name': 'waiting_for_help',
                     'entry': 'send_help_request',
-                    'entry': 'display_help',
-                    'exit': 'help_finished'}
+                    'entry': 'display_red',
+                    'exit': 'help_no_longer_needed'}
 
 waiting_for_task_number = {'name': "waiting_for_task_number",
                            'entry': "display_waiting"}
 
-states = [working_on_task, waiting_for_help, waiting_for_task_number]
+display_help_is_coming = {'name': 'display_help_is_coming',
+                          'entry': 'display_green'}
+
+states = [working_on_task, waiting_for_help, waiting_for_task_number, display_help_is_coming]
 
 t0 = {'source': 'initial', 'target': 'working_on_task', 'effect': 'initial'}
 
@@ -69,13 +82,22 @@ enter_help = {'trigger': 'help_button',
              'source': 'working_on_task',
              'target': 'waiting_for_help'}
 
+task_arrival_loop = {'trigger': 'task_arrival',
+                     'source': 'working_on_task',
+                     'target': 'working_on_task'}
+
+ta_is_coming_timer = {'trigger': 'timer0',
+                      'source': 'display_help_is_coming',
+                      'target': 'working_on_task'}
+
 exit_help = {'trigger': 'help_button',
              'source': 'waiting_for_help', 
              'target': 'working_on_task'}
 
 exit_help_mqtt = {'trigger': 'help_is_coming',
                   'source': 'waiting_for_help',
-                  'target': 'working_on_task'}
+                  'target': 'display_help_is_coming',
+                  'effect': 'start_timer("timer0", 5000)'}
 
 next_task = {'trigger': 'next_button',
              'source': 'working_on_task',
@@ -92,7 +114,9 @@ task_arrival = {'trigger': 'task_arrival',
                 'target': 'working_on_task'}
 
 
-transitions = [t0, enter_help, exit_help, next_task, prev_task, task_arrival, exit_help_mqtt]
+transitions = [t0, enter_help, exit_help, next_task, prev_task, 
+                task_arrival, exit_help_mqtt, task_arrival_loop, 
+                ta_is_coming_timer]
 
 driver = Driver()
 rpilogic = RpiLogic()
