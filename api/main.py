@@ -1,6 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_mqtt import FastMQTT, MQTTConfig
+from sse_starlette.sse import EventSourceResponse
+import asyncio
 
 app = FastAPI()
 
@@ -57,6 +59,9 @@ def get_task():
     ]
 
 
+
+
+
 @app.get("/tasks/{group_id}")
 def get_task(group_id: int):
     print(f"Get task for group {group_id}")
@@ -92,3 +97,25 @@ def update_task(group_id: int):
     return {
         "task": 1
     }
+
+
+# Notfications for frontend
+notifications = ['hello']
+
+@mqtt.subscribe("rpi_ta_system/help_is_needed")
+async def message_to_topic(client, topic, payload, qos, properties):
+    print("Received message to specific topic: ", topic, payload.decode(), qos, properties)
+    notifications.append('New notification')
+
+async def new_notification():
+    while True:
+        for i,n in enumerate(notifications):
+            yield n
+            notifications.pop(i)
+
+        await asyncio.sleep(2)
+
+@app.get('/notifications')
+async def get_notifications(request: Request): 
+    generator = new_notification()
+    return EventSourceResponse(generator)

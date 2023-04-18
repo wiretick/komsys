@@ -1,3 +1,5 @@
 fastapi
 uvicorn[standard]
 fastapi-mqtt
+sse-starlette
+asyncio
