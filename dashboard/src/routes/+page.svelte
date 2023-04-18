@@ -1,28 +1,38 @@
 <script>
   import { onMount } from "svelte";
-  import { writable } from "svelte/store";
+  // import { writable } from "svelte/store";
 
-  const state = writable({
-    notifications: [],
-  });
+  // const state = writable({
+  //   notifications: [],
+  // });
 
-  function get_notifications() {
-    const ws = new WebSocket("ws://mqtt20.iik.ntnu.no:1883/mqtt");
+  // function get_notifications() {
+  //   const ws = new WebSocket("ws://mqtt20.iik.ntnu.no:1883/mqtt");
 
-    ws.addEventListener("message", (message) => {
-      const data = JSON.parse(message.data);
-      state.update((state) => ({
-        ...state,
-        notifications: [data].concat(state.notifications),
-      }));
-    });
-  }
+  //   ws.addEventListener("message", (message) => {
+  //     const data = JSON.parse(message.data);
+  //     state.update((state) => ({
+  //       ...state,
+  //       notifications: [data].concat(state.notifications),
+  //     }));
+  //   });
+  // }
 
   let tasks = [];
 
   onMount(async () => {
     const res = await fetch(`http://127.0.0.1:8000/tasks`);
     tasks = await res.json();
+
+    // Notification stuff
+    const evtSrc = new EventSource(`http://127.0.0.1:8000/notfications`);
+    evtSrc.onmessage = function (event) {
+      console.log(event.data);
+    };
+
+    evtSrc.onerror = function (event) {
+      console.log(event);
+    };
   });
 
   function on_my_way() {
