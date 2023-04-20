@@ -1,6 +1,6 @@
 <script>
   import { onMount } from "svelte";
-  // import { writable } from "svelte/store";
+  import { writable } from "svelte/store";
 
   // const state = writable({
   //   notifications: [],
@@ -19,15 +19,17 @@
   // }
 
   let tasks = [];
+  const notifications = writable([]);
 
   onMount(async () => {
     const res = await fetch(`http://127.0.0.1:8000/tasks`);
     tasks = await res.json();
 
     // Notification stuff
-    const evtSrc = new EventSource(`http://127.0.0.1:8000/notfications`);
+    const evtSrc = new EventSource(`http://localhost:8000/notifications`);
     evtSrc.onmessage = function (event) {
-      console.log(event.data);
+      notifications.update((arr) => arr.concat(event.data));
+      // console.log(event.data);
     };
 
     evtSrc.onerror = function (event) {
@@ -67,4 +69,6 @@
       {/each}
     </tbody>
   </table>
+
+  {#each $notifications as n}{n}{/each}
 </div>

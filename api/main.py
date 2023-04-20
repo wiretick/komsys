@@ -117,12 +117,12 @@ def update_task(group_id: int):
 
 
 # Notfications for frontend
-notifications = ['hello']
+notifications = []
 
 @mqtt.subscribe("rpi_ta_system/help_is_needed")
 async def message_to_topic(client, topic, payload, qos, properties):
-    print("Received message to specific topic: ", topic, payload.decode(), qos, properties)
-    notifications.append('New notification')
+    print("Received message to specific topic: ", topic, qos, properties)
+    notifications.append(payload.decode())
 
 async def new_notification():
     while True:
