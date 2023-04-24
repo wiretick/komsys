@@ -96,7 +96,7 @@ def ask_for_help(group_id: int) -> None:
     if group_id not in help_queue: 
         groups[group_id-1]["status"] = Status.WAITING
         help_queue.append(group_id)
-        mqtt.publish("rpi_ta_system/help_is_needed", f"{group_id}")
+        notifications.append(f"Group number {group_id} just requested help with task {groups[group_id-1]['task']}!")
 
 
 @app.post("/help_is_coming/{group_id}")
@@ -127,16 +127,6 @@ def update_task(group_id: int, task_nr: int):
 
 # Notfications for frontend
 notifications = []
-
-@mqtt.subscribe("rpi_ta_system/help_is_needed")
-async def message_to_topic(client, topic, payload, qos, properties):
-    group_nr = int(payload.decode())
-    notifications.append(f"Group number {group_nr} just requested help with task {groups[group_nr-1]['task']}!")
-
-@mqtt.subscribe("rpi_ta_system/cancel_help")
-async def cancel_help(client, topic, payload, qos, properties):
-    group_nr = int(payload.decode())
-    notifications.append("")
 
 async def new_notification():
     while True:
