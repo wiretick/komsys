@@ -1,35 +1,25 @@
 <script>
+  /** @type {import('./$types').PageData} */
+  export let data;
+
   import { onMount } from "svelte";
   import { writable } from "svelte/store";
+  import { invalidateAll } from "$app/navigation";
 
-  // const state = writable({
-  //   notifications: [],
-  // });
+  const Status = {
+    WAITING: "Waiting",
+    GETTING_HELP: "Getting help",
+    WORKING: "Working",
+  };
 
-  // function get_notifications() {
-  //   const ws = new WebSocket("ws://mqtt20.iik.ntnu.no:1883/mqtt");
-
-  //   ws.addEventListener("message", (message) => {
-  //     const data = JSON.parse(message.data);
-  //     state.update((state) => ({
-  //       ...state,
-  //       notifications: [data].concat(state.notifications),
-  //     }));
-  //   });
-  // }
-
-  let tasks = [];
   const notifications = writable([]);
 
   onMount(async () => {
-    const res = await fetch(`http://127.0.0.1:8000/tasks`);
-    tasks = await res.json();
-
     // Notification stuff
     const evtSrc = new EventSource(`http://localhost:8000/notifications`);
     evtSrc.onmessage = function (event) {
+      // TODO: refetch
       notifications.update((arr) => arr.concat(event.data));
-      // console.log(event.data);
     };
 
     evtSrc.onerror = function (event) {
@@ -37,14 +27,37 @@
     };
   });
 
-  function on_my_way() {
-    console.log("Clicked");
+  async function on_my_way(group) {
+    await fetch(`http://localhost:8000/help_is_coming/${group}`, {
+      method: "POST",
+    });
+
+    invalidateAll();
+  }
+
+  async function finished(group) {
+    await fetch(`http://localhost:8000/help/${group}`, {
+      method: "DELETE",
+    });
+
+    invalidateAll();
+  }
+
+  function get_color(status) {
+    switch (status) {
+      case Status.WAITING:
+        return "badge-red";
+      case Status.GETTING_HELP:
+        return "badge-yellow";
+      default:
+        return "badge-green";
+    }
   }
 </script>
 
 <div class="mx-auto">
   <table
-    class="table-auto border border-collapse text-left bg-white shadow sm:rounded-lg"
+    class="table-auto border border-collapse text-left bg-white shadow sm:rounded-lg mb-4"
   >
     <thead class="uppercase text-xs bg-gray-50 text-gray-700">
       <tr class="border border-collapse">
@@ -55,15 +68,49 @@
       </tr>
     </thead>
     <tbody>
-      {#each tasks as { group, task, status }}
+      {#each data.queue as { group, task, status }}
         <tr class="border border-collapse">
           <td class="px-6 py-4 text-center">{group}</td>
-          <td class="px-6 py-4">#{task.id}, {task.title}</td>
+          <td class="px-6 py-4">#{task}</td>
           <td class="px-6 py-4">
-            <span class="badge-red">{status}</span>
+            <span class={get_color(status)}>{status}</span>
           </td>
-          <td class="px-6 py-4 text-right">
-            <a href="#yup" on:click={on_my_way} class="blue-link">On my way</a>
+
+          {#if Status.WAITING == status}
+            <td class="px-6 py-4 text-right">
+              <a href="#omw" on:click={() => on_my_way(group)} class="blue-link"
+                >On my way</a
+              >
+            </td>
+          {:else if Status.GETTING_HELP == status}
+            <td class="px-6 py-4 text-right">
+              <a href="#fin" on:click={() => finished(group)} class="blue-link"
+                >Finished</a
+              >
+            </td>
+          {/if}
+        </tr>
+      {/each}
+    </tbody>
+  </table>
+
+  <table
+    class="table-auto border border-collapse text-left bg-white shadow sm:rounded-lg"
+  >
+    <thead class="uppercase text-xs bg-gray-50 text-gray-700">
+      <tr class="border border-collapse">
+        <th class="px-6 py-3">Group</th>
+        <th class="px-6 py-3">Task</th>
+        <th class="px-6 py-3">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {#each data.groups as { group, task, status }}
+        <tr class="border border-collapse">
+          <td class="px-6 py-4 text-center">{group}</td>
+          <td class="px-6 py-4">#{task}</td>
+          <td class="px-6 py-4">
+            <span class={get_color(status)}>{status}</span>
           </td>
         </tr>
       {/each}
