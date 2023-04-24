@@ -96,7 +96,7 @@ def ask_for_help(group_id: int) -> None:
     # https://pypi.org/project/fastapi-mqtt/
     groups[group_id-1]["status"] = Status.WAITING
     help_queue.append(group_id)
-    mqtt.publish("rpi_ta_system/help_is_coming", f"{group_id}")
+    mqtt.publish("rpi_ta_system/help_is_needed", f"{group_id}")
 
 
 @app.post("/help_is_coming/{group_id}")
@@ -112,6 +112,7 @@ def delete_help_request(group_id: int):
     groups[group_id-1]["status"] = Status.WORKING
 
     # Publish?
+    mqtt.publish("rpi_ta_system/cancel_help", f"{group_id}")
 
 
 @app.patch("/group/{group_id}/tasks/{task_nr}")
@@ -136,13 +137,20 @@ async def message_to_topic(client, topic, payload, qos, properties):
     help_queue.append(group_nr)
     notifications.append(f"Group number {group_nr} just requested help!")
 
+@mqtt.subscribe("rpi_ta_system/cancel_help")
+async def cancel_help(client, topic, payload, qos, properties):
+    group_nr = int(payload.decode())
+    help_queue.pop(help_queue.index(group_nr))
+    groups[group_nr-1]["status"] = Status.WORKING
+    notifications.append(f"Group number {group_nr} cancelled help request!")
+
 async def new_notification():
     while True:
         for i,n in enumerate(notifications):
             yield n
             notifications.pop(i)
 
-        await asyncio.sleep(2)
+        await asyncio.sleep(0.1)
 
 @app.get('/notifications')
 async def get_notifications(request: Request): 
