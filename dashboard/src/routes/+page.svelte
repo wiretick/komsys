@@ -3,7 +3,6 @@
   export let data;
 
   import { onMount } from "svelte";
-  import { writable } from "svelte/store";
   import { invalidateAll } from "$app/navigation";
 
   const Status = {
@@ -12,13 +11,17 @@
     WORKING: "Working",
   };
 
-  const notifications = writable([]);
+  let enabledNotifications = true;
 
   onMount(async () => {
+    Notification.requestPermission().then();
+
     const evtSrc = new EventSource(`http://localhost:8000/notifications`);
 
     evtSrc.onmessage = function (event) {
-      notifications.update((arr) => arr.concat(event.data));
+      if (enabledNotifications && event.data) {
+        new Notification(event.data);
+      }
 
       invalidateAll();
     };
@@ -29,6 +32,8 @@
       method: "POST",
     });
 
+    enabledNotifications = false;
+
     invalidateAll();
   }
 
@@ -36,6 +41,8 @@
     await fetch(`http://localhost:8000/help/${group}`, {
       method: "DELETE",
     });
+
+    enabledNotifications = true;
 
     invalidateAll();
   }
@@ -113,6 +120,4 @@
       {/each}
     </tbody>
   </table>
-
-  {#each $notifications as n}{n}{/each}
 </div>
