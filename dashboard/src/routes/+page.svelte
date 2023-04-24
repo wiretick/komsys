@@ -15,10 +15,13 @@
   const notifications = writable([]);
 
   onMount(async () => {
+    Notification.requestPermission().then();
+
     const evtSrc = new EventSource(`http://localhost:8000/notifications`);
 
     evtSrc.onmessage = function (event) {
-      notifications.update((arr) => arr.concat(event.data));
+      // notifications.update((arr) => arr.concat(event.data));
+      new Notification(event.data);
 
       invalidateAll();
     };
