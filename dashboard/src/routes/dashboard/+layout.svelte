@@ -1,5 +1,5 @@
 <script>
-  import "../app.css";
+  import "../../app.css";
 </script>
 
 <header class="bg-white shadow">

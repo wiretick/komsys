@@ -1,123 +1,35 @@
 <script>
-  /** @type {import('./$types').PageData} */
-  export let data;
+  import "../app.css";
+  import { goto } from "$app/navigation";
+  import { globalNotifications } from "./store.js";
 
-  import { onMount } from "svelte";
-  import { invalidateAll } from "$app/navigation";
-
-  const Status = {
-    WAITING: "Waiting",
-    GETTING_HELP: "Getting help",
-    WORKING: "Working",
-  };
-
-  let enabledNotifications = true;
-
-  onMount(async () => {
-    Notification.requestPermission().then();
-
-    const evtSrc = new EventSource(`http://localhost:8000/notifications`);
-
-    evtSrc.onmessage = function (event) {
-      if (enabledNotifications && event.data) {
-        new Notification(event.data);
-      }
-
-      invalidateAll();
-    };
-  });
-
-  async function on_my_way(group) {
-    await fetch(`http://localhost:8000/help_is_coming/${group}`, {
-      method: "POST",
-    });
-
-    enabledNotifications = false;
-
-    invalidateAll();
+  function chose_ta() {
+    globalNotifications.set(true);
+    goto("/dashboard");
   }
 
-  async function finished(group) {
-    await fetch(`http://localhost:8000/help/${group}`, {
-      method: "DELETE",
-    });
-
-    enabledNotifications = true;
-
-    invalidateAll();
-  }
-
-  function get_color(status) {
-    switch (status) {
-      case Status.WAITING:
-        return "badge-red";
-      case Status.GETTING_HELP:
-        return "badge-yellow";
-      default:
-        return "badge-green";
-    }
+  function chose_staff() {
+    globalNotifications.set(false);
+    goto("/dashboard");
   }
 </script>
 
-<div class="mx-auto">
-  <table
-    class="table-auto border border-collapse text-left bg-white shadow sm:rounded-lg mb-4"
-  >
-    <thead class="uppercase text-xs bg-gray-50 text-gray-700">
-      <tr class="border border-collapse">
-        <th class="px-6 py-3">Group</th>
-        <th class="px-6 py-3">Task</th>
-        <th class="px-6 py-3">Status</th>
-        <th />
-      </tr>
-    </thead>
-    <tbody>
-      {#each data.queue as { group, task, status }}
-        <tr class="border border-collapse">
-          <td class="px-6 py-4 text-center">{group}</td>
-          <td class="px-6 py-4">#{task}</td>
-          <td class="px-6 py-4">
-            <span class={get_color(status)}>{status}</span>
-          </td>
-
-          {#if Status.WAITING == status}
-            <td class="px-6 py-4 text-right">
-              <a href="#omw" on:click={() => on_my_way(group)} class="blue-link"
-                >On my way</a
-              >
-            </td>
-          {:else if Status.GETTING_HELP == status}
-            <td class="px-6 py-4 text-right">
-              <a href="#fin" on:click={() => finished(group)} class="blue-link"
-                >Finished</a
-              >
-            </td>
-          {/if}
-        </tr>
-      {/each}
-    </tbody>
-  </table>
-
-  <table
-    class="table-auto border border-collapse text-left bg-white shadow sm:rounded-lg"
-  >
-    <thead class="uppercase text-xs bg-gray-50 text-gray-700">
-      <tr class="border border-collapse">
-        <th class="px-6 py-3">Group</th>
-        <th class="px-6 py-3">Task</th>
-        <th class="px-6 py-3">Status</th>
-      </tr>
-    </thead>
-    <tbody>
-      {#each data.groups as { group, task, status }}
-        <tr class="border border-collapse">
-          <td class="px-6 py-4 text-center">{group}</td>
-          <td class="px-6 py-4">#{task}</td>
-          <td class="px-6 py-4">
-            <span class={get_color(status)}>{status}</span>
-          </td>
-        </tr>
-      {/each}
-    </tbody>
-  </table>
+<div class="grid place-content-center mt-16">
+  <div>
+    <h1 class="text-8xl my-16">Entry page</h1>
+    <div class="text-center">
+      <button
+        on:click={chose_ta}
+        type="button"
+        class="text-purple-700 hover:text-white border border-purple-700 hover:bg-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2 dark:border-purple-400 dark:text-purple-400 dark:hover:text-white dark:hover:bg-purple-500 dark:focus:ring-purple-900"
+        >Teaching assistant</button
+      >
+      <button
+        on:click={chose_staff}
+        type="button"
+        class="text-purple-700 hover:text-white border border-purple-700 hover:bg-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2 dark:border-purple-400 dark:text-purple-400 dark:hover:text-white dark:hover:bg-purple-500 dark:focus:ring-purple-900"
+        >Course staff</button
+      >
+    </div>
+  </div>
 </div>
