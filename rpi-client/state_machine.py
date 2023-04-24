@@ -53,28 +53,28 @@ class RpiLogic():
         self.hat.show_letter("X")
 
     def send_help_request(self):
+        self.display_red()
         print("send_help_request")
-        # r = requests.post(f"{URL}/help/{GROUP_ID}", json={"task": self.task})
-    
+        r = requests.post(f"{URL}/help/{GROUP_ID}")
+
     def help_no_longer_needed(self):
         print("help_no_longer_needed")
-        # r = requests.delete(f"{URL}/help/{GROUP_ID}")
+        r = requests.delete(f"{URL}/help/{GROUP_ID}")
 
 working_on_task = {'name': 'working_on_task',
                    'entry': 'display_current_task'}
 
 waiting_for_help = {'name': 'waiting_for_help',
-                    'entry': 'send_help_request',
-                    'entry': 'display_red',
-                    'exit': 'help_no_longer_needed'}
+                    'entry': 'send_help_request'
+                    }
 
 waiting_for_task_number = {'name': "waiting_for_task_number",
                            'entry': "display_waiting"}
 
-display_help_is_coming = {'name': 'display_help_is_coming',
+help_in_progress = {'name': 'help_in_progress',
                           'entry': 'display_green'}
 
-states = [working_on_task, waiting_for_help, waiting_for_task_number, display_help_is_coming]
+states = [working_on_task, waiting_for_help, waiting_for_task_number, help_in_progress]
 
 t0 = {'source': 'initial', 'target': 'working_on_task', 'effect': 'initial'}
 
@@ -86,27 +86,27 @@ task_arrival_loop = {'trigger': 'task_arrival',
                      'source': 'working_on_task',
                      'target': 'working_on_task'}
 
-ta_is_coming_timer = {'trigger': 'timer0',
-                      'source': 'display_help_is_coming',
+help_finished_transition = {'trigger': 'help_finished',
+                      'source': 'help_in_progress',
                       'target': 'working_on_task'}
 
 exit_help = {'trigger': 'help_button',
-             'source': 'waiting_for_help', 
-             'target': 'working_on_task'}
+             'source': 'waiting_for_help',
+             'target': 'working_on_task',
+             'effect': 'help_no_longer_needed'}
 
 exit_help_mqtt = {'trigger': 'help_is_coming',
                   'source': 'waiting_for_help',
-                  'target': 'display_help_is_coming',
-                  'effect': 'start_timer("timer0", 5000)'}
+                  'target': 'help_in_progress'}
 
 next_task = {'trigger': 'next_button',
              'source': 'working_on_task',
-             'target': 'waiting_for_task_number', 
+             'target': 'waiting_for_task_number',
              'effect': 'get_next_task'}
 
-prev_task = {'trigger': 'prev_button', 
-             'source': 'working_on_task', 
-             'target': 'waiting_for_task_number', 
+prev_task = {'trigger': 'prev_button',
+             'source': 'working_on_task',
+             'target': 'waiting_for_task_number',
              'effect': 'get_prev_task'}
 
 task_arrival = {'trigger': 'task_arrival',
@@ -114,9 +114,9 @@ task_arrival = {'trigger': 'task_arrival',
                 'target': 'working_on_task'}
 
 
-transitions = [t0, enter_help, exit_help, next_task, prev_task, 
-                task_arrival, exit_help_mqtt, task_arrival_loop, 
-                ta_is_coming_timer]
+transitions = [t0, enter_help, exit_help, next_task, prev_task,
+                task_arrival, exit_help_mqtt, task_arrival_loop,
+                help_finished_transition]
 
 driver = Driver()
 rpilogic = RpiLogic()
