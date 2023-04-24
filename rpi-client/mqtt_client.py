@@ -25,6 +25,10 @@ class MQTT_Client:
         elif msg.topic == f"{PREFIX}/current_task/{self.group_id}":
             self.rpi_logic.task = int(msg.payload)
             self.stm_driver.send("task_arrival", "rpi")
+        elif msg.topic == f"{PREFIX}/help_finished":
+            print(f"HELP FINISHED: {self.group_id}")
+            if int(msg.payload) == self.group_id:
+                self.stm_driver.send("help_finished", "rpi")
 
 
     def start(self, broker, port):
@@ -34,6 +38,7 @@ class MQTT_Client:
 
         self.client.subscribe(f"{PREFIX}/help_is_coming")
         self.client.subscribe(f"{PREFIX}/current_task/{self.group_id}")
+        self.client.subscribe(f"{PREFIX}/help_finished")
 
         try:
             # line below should not have the () after the function!
