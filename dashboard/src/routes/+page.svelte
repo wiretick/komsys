@@ -15,15 +15,12 @@
   const notifications = writable([]);
 
   onMount(async () => {
-    // Notification stuff
     const evtSrc = new EventSource(`http://localhost:8000/notifications`);
-    evtSrc.onmessage = function (event) {
-      // TODO: refetch
-      notifications.update((arr) => arr.concat(event.data));
-    };
 
-    evtSrc.onerror = function (event) {
-      console.log(event);
+    evtSrc.onmessage = function (event) {
+      notifications.update((arr) => arr.concat(event.data));
+
+      invalidateAll();
     };
   });
 
