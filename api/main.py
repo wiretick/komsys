@@ -61,7 +61,6 @@ help_queue = [3]
 def queue():
     return [g for h in help_queue for g in groups if g['group'] == h] 
 
-# bryr vi oss om en respons her, eller skal vi bare sende alt over mqtt til dashboard hvis det blir requestet?
 @app.get("/tasks")
 def get_tasks():
     return groups
@@ -69,12 +68,11 @@ def get_tasks():
 
 @app.get("/queue")
 def get_queue():
-    # TODO fix ordering, not getting ordered according to help_queue, but by groups list.
     return queue()
 
 
 @app.get("/tasks/{group_id}")
-def get_task(group_id: int, next: bool, prev: bool): # samme funksjonsnavn som over??
+def get_task(group_id: int, next: bool, prev: bool):
     print(f"Get task for group {group_id}")
     if group_id not in help_queue:
         if next and not prev:

@@ -3,10 +3,7 @@ import asyncio
 import evdev
 from sense_hat import SenseHat
 from mqtt_client import MQTT_Client
-from time import sleep
 from json import dumps
-
-import requests
 
 URL = "http://slim7.local:8000"
 GROUP_ID = 1
@@ -24,8 +21,6 @@ class RpiLogic():
         global CURRENT_TASK
         self.task = CURRENT_TASK
         self.mq_client.client.publish(f"{PREFIX}/get_current_task/{GROUP_ID}", dumps({"next": False, "prev": False}))
-        # r = requests.get(f"{URL}/tasks/{GROUP_ID}", params={"next": False, "prev": False})
-        # self.hat.show_message("komsys")
 
     def display_current_task(self):
         print(f"STATE: display_current_task: {self.task}")
@@ -33,12 +28,10 @@ class RpiLogic():
 
     def get_next_task(self):
         print("get_next_task")
-        # r = requests.get(f"{URL}/tasks/{GROUP_ID}", params={"next": True, "prev": False})
         self.mq_client.client.publish(f"{PREFIX}/get_current_task/{GROUP_ID}", dumps({"next": True, "prev": False}))
 
     def get_prev_task(self):
         print("get_prev_task")
-        # r = requests.get(f"{URL}/tasks/{GROUP_ID}", params={"next": False, "prev": True})
         self.mq_client.client.publish(f"{PREFIX}/get_current_task/{GROUP_ID}", dumps({"next": False, "prev": True}))
 
     def display_red(self):
@@ -61,12 +54,10 @@ class RpiLogic():
         self.display_red()
         print("send_help_request")
         self.mq_client.client.publish(f"{PREFIX}/ask_for_help/{GROUP_ID}", "" )
-        # r = requests.post(f"{URL}/help/{GROUP_ID}")
 
     def help_no_longer_needed(self):
         print("help_no_longer_needed")
         self.mq_client.client.publish(f"{PREFIX}/delete_help_request/{GROUP_ID}", "" )
-        # r = requests.delete(f"{URL}/help/{GROUP_ID}")
 
 working_on_task = {'name': 'working_on_task',
                    'entry': 'display_current_task'}
