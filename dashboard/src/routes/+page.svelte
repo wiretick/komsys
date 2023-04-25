@@ -1,15 +1,17 @@
 <script>
   import "../app.css";
   import { goto } from "$app/navigation";
-  import { globalNotifications } from "./store.js";
+  import { clientID, globalNotifications } from "./store.js";
 
   function chose_ta() {
     globalNotifications.set(true);
+    clientID.set(0);
     goto("/dashboard");
   }
 
   function chose_staff() {
     globalNotifications.set(false);
+    clientID.set(1);
     goto("/dashboard");
   }
 </script>

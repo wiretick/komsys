@@ -5,6 +5,7 @@
   import { onMount } from "svelte";
   import { invalidateAll } from "$app/navigation";
   import { globalNotifications } from "../store.js";
+  import { clientID } from "../store.js";
 
   const Status = {
     WAITING: "Waiting",
@@ -15,17 +16,24 @@
   let enabledNotifications = true;
   let globalNotificationsValue;
 
+
   globalNotifications.subscribe((value) => {
     globalNotificationsValue = value;
+  });
+
+  let clientIDValue;
+  clientID.subscribe((value) => {
+    clientIDValue = value;
   });
 
   onMount(async () => {
     Notification.requestPermission().then();
 
-    const evtSrc = new EventSource(`http://localhost:8000/notifications`);
+    const evtSrc = new EventSource(`http://localhost:8000/notifications?client_id=${clientIDValue}`);
 
     evtSrc.onmessage = function (event) {
-      if (globalNotificationsValue && enabledNotifications && event.data) {
+      // if (globalNotificationsValue && enabledNotifications && event.data) {
+        if (event.data) {
         new Notification(event.data);
       }
 
@@ -34,7 +42,7 @@
   });
 
   async function on_my_way(group) {
-    await fetch(`http://localhost:8000/help_is_coming/${group}`, {
+    await fetch(`http://localhost:8000/help_is_coming/${group}?client_id=${clientIDValue}`, {
       method: "POST",
     });
 

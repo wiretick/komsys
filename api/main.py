@@ -61,6 +61,10 @@ help_queue = [3]
 def queue():
     return [g for h in help_queue for g in groups if g['group'] == h] 
 
+def update_all_clients(notification_text: str):
+    for n in notifications:
+        n.append(notification_text)
+
 @app.get("/tasks")
 def get_tasks():
     return groups
@@ -83,7 +87,8 @@ def get_task(group_id: int, next: bool, prev: bool):
             if groups[group_id-1]["task"] > 0:
                 groups[group_id-1]["task"] -= 1
 
-        notifications.append("")
+        # notifications.append("")
+        update_all_clients("")
     mqtt.publish(f"rpi_ta_system/current_task/{group_id}", groups[group_id-1]["task"])
 
 @mqtt.subscribe("rpi_ta_system/get_current_task/#")
@@ -104,7 +109,8 @@ def ask_for_help(group_id: int) -> None:
     if group_id not in help_queue: 
         groups[group_id-1]["status"] = Status.WAITING
         help_queue.append(group_id)
-        notifications.append(f"Group number {group_id} just requested help with task {groups[group_id-1]['task']}!")
+        # notifications.append(f"Group number {group_id} just requested help with task {groups[group_id-1]['task']}!")
+        update_all_clients(f"Group number {group_id} just requested help with task {groups[group_id-1]['task']}!")
 
 @mqtt.subscribe("rpi_ta_system/ask_for_help/#")
 async def mqtt_ask_for_help(client, topic, payload, qos, properties):
@@ -117,7 +123,8 @@ def delete_help_request(group_id: int):
     # Remove group from queue
     help_queue.pop(help_queue.index(group_id))
     groups[group_id-1]["status"] = Status.WORKING
-    notifications.append("")
+    # notifications.append("")
+    update_all_clients("")
     mqtt.publish("rpi_ta_system/help_finished", f"{group_id}")
 
 @mqtt.subscribe("rpi_ta_system/delete_help_request/#")
@@ -127,9 +134,13 @@ async def mqtt_delete_help_request(client, topic, payload, qos, properties):
 
 
 @app.post("/help_is_coming/{group_id}")
-def help_is_coming(group_id: int) -> None:
-    groups[group_id-1]["status"] = Status.GETTING_HELP
-    mqtt.publish("rpi_ta_system/help_is_coming", f"{group_id}")
+def help_is_coming(group_id: int, client_id: int) -> None:
+    if  groups[group_id-1]["status"] != Status.GETTING_HELP:
+        groups[group_id-1]["status"] = Status.GETTING_HELP
+        update_all_clients("")
+        mqtt.publish("rpi_ta_system/help_is_coming", f"{group_id}")
+    else:
+        notifications[client_id].append(f"Group number {group_id} is already getting help!")
 
 
 @app.patch("/group/{group_id}/tasks/{task_nr}")
@@ -144,17 +155,19 @@ def update_task(group_id: int, task_nr: int):
 
 
 # Notfications for frontend
-notifications = []
+notifications = [[], []]
 
-async def new_notification():
+async def new_notification(client_id):
+    print(notifications)
     while True:
-        for i,n in enumerate(notifications):
+        for i,n in enumerate(notifications[client_id]):
             yield n
-            notifications.pop(i)
+            notifications[client_id].pop(i)
 
         await asyncio.sleep(0.1)
 
 @app.get('/notifications')
-async def get_notifications(request: Request): 
-    generator = new_notification()
+async def get_notifications(client_id: int): 
+    print(f"Creating new notification for client {client_id}")
+    generator = new_notification(client_id)
     return EventSourceResponse(generator)
