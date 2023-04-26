@@ -131,6 +131,7 @@ async def mqtt_delete_help_request(client, topic, payload, qos, properties):
 def help_is_coming(group_id: int) -> None:
     if group_id in help_queue:
         groups[group_id-1]["status"] = Status.GETTING_HELP
+        notifications.append("")
         mqtt.publish("rpi_ta_system/help_is_coming", f"{group_id}", qos=2)
 
 
