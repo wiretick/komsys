@@ -123,7 +123,8 @@ def delete_help_request(group_id: int):
 @mqtt.subscribe("rpi_ta_system/delete_help_request/#")
 async def mqtt_delete_help_request(client, topic, payload, qos, properties):
     group_id = int(topic.split("/")[-1])
-    delete_help_request(group_id)
+    if groups[group_id-1]["status"] == Status.WAITING:
+        delete_help_request(group_id)
 
 
 @app.post("/help_is_coming/{group_id}")
