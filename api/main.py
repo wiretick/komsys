@@ -84,7 +84,7 @@ def get_task(group_id: int, next: bool, prev: bool):
                 groups[group_id-1]["task"] -= 1
 
         notifications.append("")
-    mqtt.publish(f"rpi_ta_system/current_task/{group_id}", groups[group_id-1]["task"])
+    mqtt.publish(f"rpi_ta_system/current_task/{group_id}", groups[group_id-1]["task"], qos=2)
 
 @mqtt.subscribe("rpi_ta_system/get_current_task/#")
 async def mqtt_get_task(client, topic, payload, qos, properties):
@@ -118,7 +118,7 @@ def delete_help_request(group_id: int):
     help_queue.pop(help_queue.index(group_id))
     groups[group_id-1]["status"] = Status.WORKING
     notifications.append("")
-    mqtt.publish("rpi_ta_system/help_finished", f"{group_id}")
+    mqtt.publish("rpi_ta_system/help_finished", f"{group_id}", qos=2)
 
 @mqtt.subscribe("rpi_ta_system/delete_help_request/#")
 async def mqtt_delete_help_request(client, topic, payload, qos, properties):
@@ -129,8 +129,9 @@ async def mqtt_delete_help_request(client, topic, payload, qos, properties):
 
 @app.post("/help_is_coming/{group_id}")
 def help_is_coming(group_id: int) -> None:
-    groups[group_id-1]["status"] = Status.GETTING_HELP
-    mqtt.publish("rpi_ta_system/help_is_coming", f"{group_id}")
+    if group_id in help_queue:
+        groups[group_id-1]["status"] = Status.GETTING_HELP
+        mqtt.publish("rpi_ta_system/help_is_coming", f"{group_id}", qos=2)
 
 
 @app.patch("/group/{group_id}/tasks/{task_nr}")

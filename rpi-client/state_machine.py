@@ -20,7 +20,7 @@ class RpiLogic():
         print("STATE: initial")
         global CURRENT_TASK
         self.task = CURRENT_TASK
-        self.mq_client.client.publish(f"{PREFIX}/get_current_task/{GROUP_ID}", dumps({"next": False, "prev": False}))
+        self.mq_client.client.publish(f"{PREFIX}/get_current_task/{GROUP_ID}", dumps({"next": False, "prev": False}), qos=2)
 
     def display_current_task(self):
         print(f"STATE: display_current_task: {self.task}")
@@ -28,11 +28,11 @@ class RpiLogic():
 
     def get_next_task(self):
         print("get_next_task")
-        self.mq_client.client.publish(f"{PREFIX}/get_current_task/{GROUP_ID}", dumps({"next": True, "prev": False}))
+        self.mq_client.client.publish(f"{PREFIX}/get_current_task/{GROUP_ID}", dumps({"next": True, "prev": False}), qos=2)
 
     def get_prev_task(self):
         print("get_prev_task")
-        self.mq_client.client.publish(f"{PREFIX}/get_current_task/{GROUP_ID}", dumps({"next": False, "prev": True}))
+        self.mq_client.client.publish(f"{PREFIX}/get_current_task/{GROUP_ID}", dumps({"next": False, "prev": True}), qos=2)
 
     def display_red(self):
         print("display_waiting_for_help")
@@ -53,11 +53,11 @@ class RpiLogic():
     def send_help_request(self):
         self.display_red()
         print("send_help_request")
-        self.mq_client.client.publish(f"{PREFIX}/ask_for_help/{GROUP_ID}", "" )
+        self.mq_client.client.publish(f"{PREFIX}/ask_for_help/{GROUP_ID}", "" , qos=2)
 
     def help_no_longer_needed(self):
         print("help_no_longer_needed")
-        self.mq_client.client.publish(f"{PREFIX}/delete_help_request/{GROUP_ID}", "" )
+        self.mq_client.client.publish(f"{PREFIX}/delete_help_request/{GROUP_ID}", "" , qos=2)
 
 working_on_task = {'name': 'working_on_task',
                    'entry': 'display_current_task'}
