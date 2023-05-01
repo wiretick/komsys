@@ -3,14 +3,13 @@ import asyncio
 import evdev
 from sense_hat import SenseHat
 from mqtt_client import MQTT_Client
-from time import sleep
-
-import requests
+from json import dumps
 
 URL = "http://slim7.local:8000"
 GROUP_ID = 1
 broker, port = "mqtt20.iik.ntnu.no", 1883
 CURRENT_TASK = 0
+PREFIX = "rpi_ta_system"
 
 class RpiLogic():
 
@@ -21,8 +20,7 @@ class RpiLogic():
         print("STATE: initial")
         global CURRENT_TASK
         self.task = CURRENT_TASK
-        r = requests.get(f"{URL}/tasks/{GROUP_ID}", params={"next": False, "prev": False})
-        # self.hat.show_message("komsys")
+        self.mq_client.client.publish(f"{PREFIX}/get_current_task/{GROUP_ID}", dumps({"next": False, "prev": False}), qos=2)
 
     def display_current_task(self):
         print(f"STATE: display_current_task: {self.task}")
@@ -30,11 +28,11 @@ class RpiLogic():
 
     def get_next_task(self):
         print("get_next_task")
-        r = requests.get(f"{URL}/tasks/{GROUP_ID}", params={"next": True, "prev": False})
+        self.mq_client.client.publish(f"{PREFIX}/get_current_task/{GROUP_ID}", dumps({"next": True, "prev": False}), qos=2)
 
     def get_prev_task(self):
         print("get_prev_task")
-        r = requests.get(f"{URL}/tasks/{GROUP_ID}", params={"next": False, "prev": True})
+        self.mq_client.client.publish(f"{PREFIX}/get_current_task/{GROUP_ID}", dumps({"next": False, "prev": True}), qos=2)
 
     def display_red(self):
         print("display_waiting_for_help")
@@ -55,11 +53,11 @@ class RpiLogic():
     def send_help_request(self):
         self.display_red()
         print("send_help_request")
-        r = requests.post(f"{URL}/help/{GROUP_ID}")
+        self.mq_client.client.publish(f"{PREFIX}/ask_for_help/{GROUP_ID}", "" , qos=2)
 
     def help_no_longer_needed(self):
         print("help_no_longer_needed")
-        r = requests.delete(f"{URL}/help/{GROUP_ID}")
+        self.mq_client.client.publish(f"{PREFIX}/delete_help_request/{GROUP_ID}", "" , qos=2)
 
 working_on_task = {'name': 'working_on_task',
                    'entry': 'display_current_task'}
@@ -120,12 +118,13 @@ transitions = [t0, enter_help, exit_help, next_task, prev_task,
 
 driver = Driver()
 rpilogic = RpiLogic()
+mq_client = MQTT_Client(driver, GROUP_ID, rpilogic)
+rpilogic.mq_client = mq_client
 machine = Machine(name='rpi', transitions=transitions, states=states,obj=rpilogic)
 rpilogic.stm = machine
 driver.add_machine(machine)
-driver.start()
-mq_client = MQTT_Client(driver, GROUP_ID, rpilogic)
 mq_client.start(broker, port)
+driver.start()
 
 
 def get_joystick():

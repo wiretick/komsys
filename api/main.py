@@ -4,6 +4,7 @@ from fastapi_mqtt import FastMQTT, MQTTConfig
 from sse_starlette.sse import EventSourceResponse
 import asyncio
 from enum import Enum
+from json import loads
 
 app = FastAPI()
 
@@ -60,7 +61,6 @@ help_queue = [3]
 def queue():
     return [g for h in help_queue for g in groups if g['group'] == h] 
 
-# bryr vi oss om en respons her, eller skal vi bare sende alt over mqtt til dashboard hvis det blir requestet?
 @app.get("/tasks")
 def get_tasks():
     return groups
@@ -68,12 +68,11 @@ def get_tasks():
 
 @app.get("/queue")
 def get_queue():
-    # TODO fix ordering, not getting ordered according to help_queue, but by groups list.
     return queue()
 
 
 @app.get("/tasks/{group_id}")
-def get_task(group_id: int, next: bool, prev: bool): # samme funksjonsnavn som over??
+def get_task(group_id: int, next: bool, prev: bool):
     print(f"Get task for group {group_id}")
     if group_id not in help_queue:
         if next and not prev:
@@ -87,6 +86,15 @@ def get_task(group_id: int, next: bool, prev: bool): # samme funksjonsnavn som o
         notifications.append("")
     mqtt.publish(f"rpi_ta_system/current_task/{group_id}", groups[group_id-1]["task"])
 
+@mqtt.subscribe("rpi_ta_system/get_current_task/#")
+async def mqtt_get_task(client, topic, payload, qos, properties):
+    payload = loads(payload)
+    group_id = int(topic.split("/")[-1])
+    next = payload["next"]
+    prev = payload["prev"]
+
+    get_task(group_id, next, prev)
+
 
 @app.post("/help/{group_id}")
 def ask_for_help(group_id: int) -> None:
@@ -98,11 +106,10 @@ def ask_for_help(group_id: int) -> None:
         help_queue.append(group_id)
         notifications.append(f"Group number {group_id} just requested help with task {groups[group_id-1]['task']}!")
 
-
-@app.post("/help_is_coming/{group_id}")
-def help_is_coming(group_id: int) -> None:
-    groups[group_id-1]["status"] = Status.GETTING_HELP
-    mqtt.publish("rpi_ta_system/help_is_coming", f"{group_id}")
+@mqtt.subscribe("rpi_ta_system/ask_for_help/#")
+async def mqtt_ask_for_help(client, topic, payload, qos, properties):
+    group_id = int(topic.split("/")[-1])
+    ask_for_help(group_id)
 
 
 @app.delete("/help/{group_id}")
@@ -112,6 +119,20 @@ def delete_help_request(group_id: int):
     groups[group_id-1]["status"] = Status.WORKING
     notifications.append("")
     mqtt.publish("rpi_ta_system/help_finished", f"{group_id}")
+
+@mqtt.subscribe("rpi_ta_system/delete_help_request/#")
+async def mqtt_delete_help_request(client, topic, payload, qos, properties):
+    group_id = int(topic.split("/")[-1])
+    if groups[group_id-1]["status"] == Status.WAITING:
+        delete_help_request(group_id)
+
+
+@app.post("/help_is_coming/{group_id}")
+def help_is_coming(group_id: int) -> None:
+    if group_id in help_queue:
+        groups[group_id-1]["status"] = Status.GETTING_HELP
+        notifications.append("")
+        mqtt.publish("rpi_ta_system/help_is_coming", f"{group_id}")
 
 
 @app.patch("/group/{group_id}/tasks/{task_nr}")

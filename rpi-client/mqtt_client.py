@@ -36,9 +36,9 @@ class MQTT_Client:
         print("Connecting to {}:{}".format(broker, port))
         self.client.connect(broker, port)
 
-        self.client.subscribe(f"{PREFIX}/help_is_coming")
-        self.client.subscribe(f"{PREFIX}/current_task/{self.group_id}")
-        self.client.subscribe(f"{PREFIX}/help_finished")
+        self.client.subscribe(f"{PREFIX}/help_is_coming", qos=2)
+        self.client.subscribe(f"{PREFIX}/current_task/{self.group_id}", qos=2)
+        self.client.subscribe(f"{PREFIX}/help_finished", qos=2)
 
         try:
             # line below should not have the () after the function!
